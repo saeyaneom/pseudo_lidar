@@ -17,6 +17,7 @@ import logger
 from dataloader import KITTILoader3D as ls
 from dataloader import KITTILoader_dataset3d as DA
 from models import *
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description='PSMNet')
 parser.add_argument('--maxdisp', type=int, default=192,
@@ -104,18 +105,18 @@ def train(imgL, imgR, disp_L):
         output1 = torch.squeeze(output1, 1)
         output2 = torch.squeeze(output2, 1)
         output3 = torch.squeeze(output3, 1)
-        loss = 0.5 * F.smooth_l1_loss(output1[mask], disp_true[mask], size_average=True) + 0.7 * F.smooth_l1_loss(
-            output2[mask], disp_true[mask], size_average=True) + F.smooth_l1_loss(output3[mask], disp_true[mask],
-                                                                                  size_average=True)
+        loss = 0.5 * F.smooth_l1_loss(output1[mask], disp_true[mask], reduction="mean") + 0.7 * F.smooth_l1_loss(
+            output2[mask], disp_true[mask], reduction="mean") + F.smooth_l1_loss(output3[mask], disp_true[mask],
+                                                                                  reduction="mean")
     elif args.model == 'basic':
         output = model(imgL, imgR)
         output = torch.squeeze(output, 1)
-        loss = F.smooth_l1_loss(output[mask], disp_true[mask], size_average=True)
+        loss = F.smooth_l1_loss(output[mask], disp_true[mask], reduction="mean")
 
     loss.backward()
     optimizer.step()
 
-    return loss.data[0]
+    return loss.item()
 
 
 def test(imgL, imgR, disp_true):
@@ -157,7 +158,7 @@ def main():
     max_epo = 0
     start_full_time = time.time()
 
-    for epoch in range(args.start_epoch, args.epochs + 1):
+    for epoch in tqdm(range(args.start_epoch, args.epochs + 1)):
         total_train_loss = 0
         adjust_learning_rate(optimizer, epoch)
 
@@ -166,7 +167,7 @@ def main():
             start_time = time.time()
 
             loss = train(imgL_crop, imgR_crop, disp_crop_L)
-            print('Iter %d training loss = %.3f , time = %.2f' % (batch_idx, loss, time.time() - start_time))
+            # print('Iter %d training loss = %.3f , time = %.2f' % (batch_idx, loss, time.time() - start_time))
             total_train_loss += loss
         print('epoch %d total training loss = %.3f' % (epoch, total_train_loss / len(TrainImgLoader)))
 

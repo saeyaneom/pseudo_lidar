@@ -18,6 +18,8 @@ import time
 import math
 from utils import preprocess 
 from models import *
+import torchvision.transforms as transforms
+from PIL import Image
 
 # 2012 data /media/jiaren/ImageNet/data_scene_flow_2012/testing/
 
@@ -68,7 +70,7 @@ if args.loadmodel is not None:
     state_dict = torch.load(args.loadmodel)
     model.load_state_dict(state_dict['state_dict'])
 
-print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
+# print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
 
 def test(imgL,imgR):
         model.eval()
@@ -79,6 +81,9 @@ def test(imgL,imgR):
 
         imgL, imgR= Variable(imgL), Variable(imgR)
 
+        ## check
+        # print(f'imgL shape: {imgL.shape}, imgR shape: {imgR.shape}')
+        ##
         with torch.no_grad():
             output = model(imgL,imgR)
         output = torch.squeeze(output)
@@ -88,38 +93,59 @@ def test(imgL,imgR):
 
 
 def main():
-   processed = preprocess.get_transform(augment=False)
-   if not os.path.isdir(args.save_path):
-       os.makedirs(args.save_path)
+    processed = preprocess.get_transform(augment=False, scale_size = 0.5)
+
+    transform = transforms.Compose([
+        transforms.Resize(384),  # 모든 이미지를 12 리사이즈           # 텐서로 변환
+    ])
+
+    if not os.path.isdir(args.save_path):
+        os.makedirs(args.save_path)
 
 
-   for inx in range(len(test_left_img)):
+    for inx in range(len(test_left_img)):
+        
+        ##### original one ######
+        imgL_o = (skimage.io.imread(test_left_img[inx]).astype('float32'))
+        imgR_o = (skimage.io.imread(test_right_img[inx]).astype('float32'))
 
-       imgL_o = (skimage.io.imread(test_left_img[inx]).astype('float32'))
-       imgR_o = (skimage.io.imread(test_right_img[inx]).astype('float32'))
-       imgL = processed(imgL_o).numpy()
-       imgR = processed(imgR_o).numpy()
-       imgL = np.reshape(imgL,[1,3,imgL.shape[1],imgL.shape[2]])
-       imgR = np.reshape(imgR,[1,3,imgR.shape[1],imgR.shape[2]])
+        # imgL_o = (np.array(transform(Image.open(test_left_img[inx]))).astype('float32'))
+        # imgR_o = (np.array(transform(Image.open(test_right_img[inx]))).astype('float32'))
+        
+        # print(f"imgL_original: {imgL_o.shape}")
 
-       # pad to (384, 1248)
-       top_pad = 384-imgL.shape[2]
-       left_pad = 1248-imgL.shape[3]
-       imgL = np.lib.pad(imgL,((0,0),(0,0),(top_pad,0),(0,left_pad)),mode='constant',constant_values=0)
-       imgR = np.lib.pad(imgR,((0,0),(0,0),(top_pad,0),(0,left_pad)),mode='constant',constant_values=0)
+        imgL = processed(imgL_o).numpy()
+        imgR = processed(imgR_o).numpy()
+# 
+        # print(f"imgL_preprocessed: {imgL.shape}")
+        imgL = np.reshape(imgL,[1,3,imgL.shape[1],imgL.shape[2]])
+        imgR = np.reshape(imgR,[1,3,imgR.shape[1],imgR.shape[2]])
 
-       start_time = time.time()
-       pred_disp = test(imgL,imgR)
-       print('time = %.2f' %(time.time() - start_time))
+    #    pad to (384, 1248)
+        top_pad = 384-imgL.shape[2] # 9
+        left_pad = 1248-imgL.shape[3] # 6
 
-       top_pad   = 384-imgL_o.shape[0]
-       left_pad  = 1248-imgL_o.shape[1]
-       img = pred_disp[top_pad:,:-left_pad]
-       print(test_left_img[inx].split('/')[-1])
-       if args.save_figure:
-           skimage.io.imsave(args.save_path+'/'+test_left_img[inx].split('/')[-1],(img*256).astype('uint16'))
-       else:
-           np.save(args.save_path+'/'+test_left_img[inx].split('/')[-1][:-4], img)
+        imgL = np.lib.pad(imgL,((0,0),(0,0),(top_pad,0),(0,left_pad)),mode='constant',constant_values=0)
+        imgR = np.lib.pad(imgR,((0,0),(0,0),(top_pad,0),(0,left_pad)),mode='constant',constant_values=0)
+
+        start_time = time.time()
+        pred_disp = test(imgL,imgR)
+        print('time = %.2f' %(time.time() - start_time))
+
+        top_pad   = 384-imgL_o.shape[0]
+        left_pad  = 1248-imgL_o.shape[1]
+
+        img = pred_disp[top_pad:,:-left_pad]
+        print(test_left_img[inx].split('/')[-1])
+
+        ## check
+        print(f'pred_disp shape: {pred_disp.shape}')
+        if args.save_figure:
+            skimage.io.imsave(args.save_path+'/'+test_left_img[inx].split('/')[-1],(img*256).astype('uint16'))
+        else:
+            np.save(args.save_path+'/'+test_left_img[inx].split('/')[-1][:-4], img)
+        
+        
 
 if __name__ == '__main__':
    main()

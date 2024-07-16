@@ -36,19 +36,30 @@ class hourglass(nn.Module):
     def forward(self, x, presqu, postsqu):
 
         out = self.conv1(x)  # in:1/4 out:1/8
+
+        # print(f'conv1 out shape: {out.shape}')
+
         pre = self.conv2(out)  # in:1/8 out:1/8
+
+        # print(f'conv2 pre shape: {pre.shape}')
         if postsqu is not None:
             pre = F.relu(pre + postsqu, inplace=True)
         else:
             pre = F.relu(pre, inplace=True)
 
         out = self.conv3(pre)  # in:1/8 out:1/16
+
+        # print(f'conv3 out shape: {out.shape}')
         out = self.conv4(out)  # in:1/16 out:1/16
+        # print(f'conv4 out shape: {out.shape}')
 
         if presqu is not None:
             post = F.relu(self.conv5(out) + presqu, inplace=True)  # in:1/16 out:1/8
+            # print(f'conv5 post shape: {post.shape}')
         else:
             post = F.relu(self.conv5(out) + pre, inplace=True)
+            print(presqu)
+            # print(f'conv5 post shape: {post.shape}')
 
         out = self.conv6(post)  # in:1/8 out:1/4
 
@@ -110,13 +121,12 @@ class PSMNet(nn.Module):
         refimg_fea = self.feature_extraction(left)
         targetimg_fea = self.feature_extraction(right)
 
-        print(refimg_fea.size())
         # matching
         cost = Variable(
-            torch.FloatTensor(refimg_fea.size()[0], refimg_fea.size()[1] * 2, self.maxdisp / 4, refimg_fea.size()[2],
+            torch.FloatTensor(refimg_fea.size()[0], refimg_fea.size()[1] * 2, int(self.maxdisp / 4), refimg_fea.size()[2],
                               refimg_fea.size()[3]).zero_()).cuda()
 
-        for i in range(self.maxdisp / 4):
+        for i in range(int(self.maxdisp / 4)):
             if i > 0:
                 cost[:, :refimg_fea.size()[1], i, :, i:] = refimg_fea[:, :, :, i:]
                 cost[:, refimg_fea.size()[1]:, i, :, i:] = targetimg_fea[:, :, :, :-i]
@@ -142,8 +152,8 @@ class PSMNet(nn.Module):
         cost3 = self.classif3(out3) + cost2
 
         if self.training:
-            cost1 = F.upsample(cost1, [self.maxdisp, left.size()[2], left.size()[3]], mode='trilinear')
-            cost2 = F.upsample(cost2, [self.maxdisp, left.size()[2], left.size()[3]], mode='trilinear')
+            cost1 = F.interpolate(cost1, [self.maxdisp, left.size()[2], left.size()[3]], mode='trilinear')
+            cost2 = F.interpolate(cost2, [self.maxdisp, left.size()[2], left.size()[3]], mode='trilinear')
 
             cost1 = torch.squeeze(cost1, 1)
             pred1 = F.softmax(cost1, dim=1)
@@ -153,7 +163,7 @@ class PSMNet(nn.Module):
             pred2 = F.softmax(cost2, dim=1)
             pred2 = disparityregression(self.maxdisp)(pred2)
 
-        cost3 = F.upsample(cost3, [self.maxdisp, left.size()[2], left.size()[3]], mode='trilinear')
+        cost3 = F.interpolate(cost3, [self.maxdisp, left.size()[2], left.size()[3]], mode='trilinear')
         cost3 = torch.squeeze(cost3, 1)
         pred3 = F.softmax(cost3, dim=1)
         pred3 = disparityregression(self.maxdisp)(pred3)

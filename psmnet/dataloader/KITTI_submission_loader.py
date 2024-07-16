@@ -4,6 +4,7 @@ from PIL import Image
 import os
 import os.path
 import numpy as np
+import torchvision.transforms as transforms
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -16,18 +17,22 @@ def is_image_file(filename):
 
 def dataloader(filepath):
 
-  left_fold  = 'image_2/'
-  right_fold = 'image_3/'
-  # left_fold  = 'image_2/data/'
-  # right_fold = 'image_3/data/'
+    left_fold  = 'image_2/'
+    right_fold = 'image_3/'
+    # left_fold  = 'image_2/data/'
+    # right_fold = 'image_3/data/'
 
 
-  # image = [img for img in os.listdir(filepath+left_fold) if img.find('_10') > -1]
-  image = [img for img in os.listdir(filepath+left_fold)]
-  image = sorted(image)
+    # image = [img for img in os.listdir(filepath+left_fold) if img.find('_10') > -1]
+    image = [img for img in os.listdir(filepath+left_fold)]
+    image = sorted(image)
 
+    # 1242 * 375 이하
 
-  left_test  = [filepath+left_fold+img for img in image]
-  right_test = [filepath+right_fold+img for img in image]
+    left_test  = [filepath+left_fold+img for img in image]
+    right_test = [filepath+right_fold+img for img in image]
 
-  return left_test, right_test
+    # left_test  = [transform(Image.open(filepath+left_fold+img)) for img in image]
+    # right_test = [transform(Image.open(filepath+left_fold+img)) for img in image]
+
+    return left_test, right_test
