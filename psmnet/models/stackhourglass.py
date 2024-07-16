@@ -1,6 +1,5 @@
 from __future__ import print_function
-
-from submodule import *
+from models.submodule import *
 import torch
 import torch.nn as nn
 import torch.utils.data
@@ -111,6 +110,7 @@ class PSMNet(nn.Module):
         refimg_fea = self.feature_extraction(left)
         targetimg_fea = self.feature_extraction(right)
 
+        print(refimg_fea.size())
         # matching
         cost = Variable(
             torch.FloatTensor(refimg_fea.size()[0], refimg_fea.size()[1] * 2, self.maxdisp / 4, refimg_fea.size()[2],

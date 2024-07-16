@@ -1,7 +1,7 @@
 import random
 
 import numpy as np
-import preprocess
+import utils.preprocess as preprocess
 import torch
 import torch.utils.data as data
 from PIL import Image

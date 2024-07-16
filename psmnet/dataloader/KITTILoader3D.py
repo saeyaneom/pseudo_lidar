@@ -16,8 +16,8 @@ def dataloader(filepath, train_file):
     with open(train_file, 'r') as f:
         train_idx = [x.strip() for x in f.readlines()]
 
-    left_train = [filepath + '/' + left_fold + img + '.png' for img in train_idx]
-    right_train = [filepath + '/' + right_fold + img + '.png' for img in train_idx]
+    left_train = [filepath + '/' + left_fold + img + '.jpg' for img in train_idx]
+    right_train = [filepath + '/' + right_fold + img + '.jpg' for img in train_idx]
     disp_train_L = [filepath + '/' + disp_L + img + '.npy' for img in train_idx]
 
     return left_train, right_train, disp_train_L

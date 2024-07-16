@@ -3,7 +3,8 @@ import os
 
 import numpy as np
 import scipy.misc as ssc
-
+import imageio
+import tqdm
 import kitti_util
 
 
@@ -31,7 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type=str, default='~/Kitti/object/training/')
     parser.add_argument('--split_file', type=str, default='~/Kitti/object/train.txt')
     args = parser.parse_args()
-
+    
     assert os.path.isdir(args.data_path)
     lidar_dir = args.data_path + '/velodyne/'
     calib_dir = args.data_path + '/calib/'
@@ -52,7 +53,8 @@ if __name__ == '__main__':
     with open(args.split_file, 'r') as f:
         file_names = [x.strip() for x in f.readlines()]
 
-    for fn in lidar_files:
+
+    for fn in tqdm.tqdm(lidar_files):
         predix = fn[:-4]
         if predix not in file_names:
             continue
@@ -60,9 +62,9 @@ if __name__ == '__main__':
         calib = kitti_util.Calibration(calib_file)
         # load point cloud
         lidar = np.fromfile(lidar_dir + '/' + fn, dtype=np.float32).reshape((-1, 4))[:, :3]
-        image_file = '{}/{}.png'.format(image_dir, predix)
-        image = ssc.imread(image_file)
+        image_file = '{}/{}.jpg'.format(image_dir, predix)
+        image = imageio.imread(image_file)
         height, width = image.shape[:2]
         disp = generate_dispariy_from_velo(lidar, height, width, calib)
         np.save(disparity_dir + '/' + predix, disp)
-        print('Finish Disparity {}'.format(predix))
+        # print('Finish Disparity {}'.format(predix))
